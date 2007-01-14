@@ -7,12 +7,14 @@ from StringIO import StringIO
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.error import TimeoutError
+from twisted.internet.task import Clock
 from twisted.conch.insults.window import TopWindow, VBox, TextOutput
 from twisted.conch.insults.helper import TerminalBuffer
 from twisted.conch.insults.insults import privateModes
 
 from invective.widgets import LineInputWidget, StatusWidget
 from invective.tui import createChatRootWidget, UserInterface
+from invective.irc import IRCClient
 
 
 class WidgetLayoutTests(TestCase):
@@ -32,9 +34,15 @@ class WidgetLayoutTests(TestCase):
 
         statusModel = object()
 
-        root = createChatRootWidget(80, 24, painter, statusModel, controller)
+        class reactor:
+            def callLater(*a, **kw):
+                pass
+            callLater = staticmethod(callLater)
+
+        root = createChatRootWidget(reactor, 80, 24, painter, statusModel, controller)
         self.failUnless(isinstance(root, TopWindow))
         self.assertIdentical(root.painter, painter)
+        self.assertIdentical(root.reactor, reactor)
         self.assertEqual(len(root.children), 1)
         vbox = root.children[0]
         self.failUnless(isinstance(vbox, VBox))
@@ -72,6 +80,17 @@ class UserInterfaceTests(TestCase):
         self.failIfIn(privateModes.CURSOR_MODE, self.terminal.privateModes)
 
 
+    def test_serverConnectionEstablished(self):
+        """
+        Verify that when a new connection to a server is established, this is
+        reported in the output area.
+        """
+        ircTransport = StringIO()
+        ircProtocol = IRCClient()
+        ircProtocol.makeConnection(ircTransport)
+        self.protocol.makeConnection(self.terminal)
+        self.protocol._cbNewServerConnection(ircProtocol, 'irc.example.org', 'testuser')
+
 
 class InputParsingTests(TestCase):
     """
@@ -79,6 +98,9 @@ class InputParsingTests(TestCase):
     message destined for the network.
     """
     def setUp(self):
+        self.tcpConnections = []
+        self.clock = Clock()
+
         self.transport = None
         self.terminal = TerminalBuffer()
         self.terminal.makeConnection(self.transport)
@@ -86,16 +108,13 @@ class InputParsingTests(TestCase):
         self.protocol.reactor = self
         self.protocol.makeConnection(self.terminal)
 
-        self.tcpConnections = []
-        self.delayedCalls = []
-
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=''):
         self.tcpConnections.append((host, port, factory, timeout, bindAddress))
 
 
     def callLater(self, n, f, *a, **kw):
-        self.delayedCalls.append((n, f, a, kw))
+        return self.clock.callLater(n, f, *a, **kw)
 
 
     def test_commandDispatch(self):
@@ -119,7 +138,7 @@ class InputParsingTests(TestCase):
         This is poorly factored.  IRC testing should be done elsewhere.
         Connection setup testing should be done elsewhere.
         """
-        self.protocol.cmd_SERVER('/server irc.example.org')
+        self.protocol.cmd_SERVER('/server irc.example.org testuser')
         self.assertEqual(len(self.tcpConnections), 1)
         self.assertEqual(self.tcpConnections[0][:2], ('irc.example.org', 6667))
         factory = self.tcpConnections[0][2]
@@ -127,12 +146,9 @@ class InputParsingTests(TestCase):
         transport = StringIO()
         protocol.makeConnection(transport)
         self.assertEqual(transport.getvalue(), '')
-        self.assertEqual(len(self.delayedCalls), 1)
 
-        self.protocol.nickname = 'testuser'
-
-        n, f, a, kw = self.delayedCalls.pop()
-        f(*a, **kw)
+        while self.clock.calls:
+            self.clock.advance(1)
 
         self.assertEqual(
             transport.getvalue(),
@@ -150,11 +166,14 @@ class InputParsingTests(TestCase):
         """
         Like L{test_serverCommand} but for a connection which fails.
         """
-        self.protocol.cmd_SERVER('/server irc.example.org')
+        self.protocol.cmd_SERVER('/server irc.example.org testuser')
         self.assertEqual(len(self.tcpConnections), 1)
         self.assertEqual(self.tcpConnections[0][:2], ('irc.example.org', 6667))
         factory = self.tcpConnections[0][2]
         factory.clientConnectionFailed(None, TimeoutError("mock timeout"))
+
+        while self.clock.calls:
+            self.clock.advance(1)
 
         output = str(self.terminal).splitlines()
         report = output.pop()
