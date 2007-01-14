@@ -19,6 +19,13 @@ class InputTests(TestCase):
     def setUp(self):
         self.lines = []
         self.widget = LineInputWidget(self.maxWidth, self.lines.append)
+        self.widget.parent = self
+        self.painted = False
+        self.dirty = False
+
+
+    def repaint(self):
+        self.painted = True
 
 
     def test_printable(self):
@@ -34,6 +41,7 @@ class InputTests(TestCase):
         self.widget.cursor -= 1
         self.widget.keystrokeReceived('l', None)
         self.assertEqual(self.widget.buffer, s[:-1] + 'l' + s[-1:])
+        self.failUnless(self.painted)
 
 
     def test_backspace(self):
@@ -42,9 +50,11 @@ class InputTests(TestCase):
         moves the cursor back one position.
         """
         self.widget.keystrokeReceived('X', None)
+        self.painted = False
         self.widget.keystrokeReceived(ServerProtocol.BACKSPACE, None)
         self.assertEqual(self.widget.cursor, 0)
         self.assertEqual(self.widget.buffer, '')
+        self.failUnless(self.painted)
 
 
     def test_backspaceWhenEmpty(self):
@@ -53,6 +63,7 @@ class InputTests(TestCase):
         the buffer.
         """
         self.widget.keystrokeReceived(ServerProtocol.BACKSPACE, None)
+        self.failIf(self.painted)
         self.assertEqual(self.widget.cursor, 0)
         self.assertEqual(self.widget.buffer, '')
 
@@ -65,7 +76,9 @@ class InputTests(TestCase):
         s = 'words'
         for ch in s:
             self.widget.keystrokeReceived(ch, None)
+        self.painted = False
         self.widget.keystrokeReceived('\r', None)
+        self.failUnless(self.painted)
         self.assertEqual(self.lines, [s])
         self.assertEqual(self.widget.cursor, 0)
         self.assertEqual(self.widget.buffer, '')
@@ -76,7 +89,9 @@ class InputTests(TestCase):
         Test that the home key moves the cursor to the beginning of the line.
         """
         self.widget.keystrokeReceived('X', None)
+        self.painted = False
         self.widget.keystrokeReceived(ServerProtocol.HOME, None)
+        self.failUnless(self.painted)
         self.assertEqual(self.widget.cursor, 0)
         self.assertEqual(self.widget.buffer, 'X')
 
@@ -87,7 +102,9 @@ class InputTests(TestCase):
         """
         self.widget.keystrokeReceived('X', None)
         self.widget.cursor = 0
+        self.painted = False
         self.widget.keystrokeReceived(ServerProtocol.END, None)
+        self.failUnless(self.painted)
         self.assertEqual(self.widget.cursor, 1)
         self.assertEqual(self.widget.buffer, 'X')
 
@@ -100,10 +117,14 @@ class InputTests(TestCase):
         s = 'hello world'
         for ch in s:
             self.widget.keystrokeReceived(ch, None)
+        self.painted = False
         self.widget.keystrokeReceived('b', ServerProtocol.ALT)
+        self.failUnless(self.painted)
         self.assertEqual(self.widget.buffer, s)
         self.assertEqual(self.widget.cursor, s.index('world'))
+        self.painted = False
         self.widget.keystrokeReceived('b', ServerProtocol.ALT)
+        self.failUnless(self.painted)
         self.assertEqual(self.widget.buffer, s)
         self.assertEqual(self.widget.cursor, 0)
 
@@ -113,6 +134,7 @@ class InputTests(TestCase):
         Test that M-b does nothing with an empty buffer.
         """
         self.widget.keystrokeReceived('b', ServerProtocol.ALT)
+        self.failIf(self.painted)
         self.assertEqual(self.widget.cursor, 0)
         self.assertEqual(self.widget.buffer, '')
 
@@ -123,7 +145,9 @@ class InputTests(TestCase):
         """
         self.widget.keystrokeReceived('X', None)
         self.widget.cursor = 0
+        self.painted = False
         self.widget.keystrokeReceived('b', ServerProtocol.ALT)
+        self.failIf(self.painted)
         self.assertEqual(self.widget.buffer, 'X')
         self.assertEqual(self.widget.cursor, 0)
 
@@ -137,10 +161,14 @@ class InputTests(TestCase):
         for ch in s:
             self.widget.keystrokeReceived(ch, None)
         self.widget.cursor = 0
+        self.painted = False
         self.widget.keystrokeReceived('f', ServerProtocol.ALT)
+        self.failUnless(self.painted)
         self.assertEqual(self.widget.buffer, s)
         self.assertEqual(self.widget.cursor, s.index(' '))
+        self.painted = False
         self.widget.keystrokeReceived('f', ServerProtocol.ALT)
+        self.failUnless(self.painted)
         self.assertEqual(self.widget.buffer, s)
         self.assertEqual(self.widget.cursor, len(s))
 
@@ -150,6 +178,7 @@ class InputTests(TestCase):
         Test that M-f does nothing with an empty buffer.
         """
         self.widget.keystrokeReceived('f', ServerProtocol.ALT)
+        self.failIf(self.painted)
         self.assertEqual(self.widget.buffer, '')
         self.assertEqual(self.widget.cursor, 0)
 
@@ -159,6 +188,8 @@ class InputTests(TestCase):
         Test that M-f at the end of a line does nothing.
         """
         self.widget.keystrokeReceived('X', None)
+        self.painted = False
         self.widget.keystrokeReceived('f', ServerProtocol.ALT)
+        self.failIf(self.painted)
         self.assertEqual(self.widget.buffer, 'X')
         self.assertEqual(self.widget.cursor, 1)

@@ -33,7 +33,9 @@ class LineInputWidget(TextInput):
         Handle the home function key by repositioning the cursor at the
         beginning of the input area.
         """
-        self.cursor = 0
+        if self.cursor != 0:
+            self.cursor = 0
+            self.repaint()
 
 
     def func_END(self, modifier):
@@ -41,7 +43,10 @@ class LineInputWidget(TextInput):
         Handle the end function key by repositioning the cursor just past the
         end of the text in the input area.
         """
-        self.cursor = len(self.buffer)
+        pos = len(self.buffer)
+        if self.cursor != pos:
+            self.cursor = pos
+            self.repaint()
 
 
     def func_ALT_b(self):
@@ -51,10 +56,13 @@ class LineInputWidget(TextInput):
         Words are considered non-whitespace characters delimited by whitespace
         characters.
         """
+        initial = self.cursor
         while self.cursor > 0 and self.buffer[self.cursor - 1].isspace():
             self.cursor -= 1
         while self.cursor > 0 and not self.buffer[self.cursor - 1].isspace():
             self.cursor -= 1
+        if self.cursor != initial:
+            self.repaint()
 
 
     def func_ALT_f(self):
@@ -64,11 +72,14 @@ class LineInputWidget(TextInput):
         are considered non-whitespace characters delimited by whitespace
         characters.
         """
+        initial = self.cursor
         n = len(self.buffer)
         while self.cursor < n and self.buffer[self.cursor].isspace():
             self.cursor += 1
         while self.cursor < n and not self.buffer[self.cursor].isspace():
             self.cursor += 1
+        if initial != self.cursor:
+            self.repaint()
 
 
     def characterReceived(self, keyID, modifier):
