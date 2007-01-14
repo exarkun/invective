@@ -8,11 +8,11 @@ from StringIO import StringIO
 from twisted.trial.unittest import TestCase
 from twisted.internet.error import TimeoutError
 from twisted.internet.task import Clock
-from twisted.conch.insults.window import TopWindow, VBox, TextOutput
+from twisted.conch.insults.window import TopWindow, VBox
 from twisted.conch.insults.helper import TerminalBuffer
 from twisted.conch.insults.insults import privateModes
 
-from invective.widgets import LineInputWidget, StatusWidget
+from invective.widgets import LineInputWidget, StatusWidget, OutputWidget
 from invective.tui import createChatRootWidget, UserInterface
 from invective.irc import IRCClient
 
@@ -23,8 +23,9 @@ class WidgetLayoutTests(TestCase):
     """
     def test_rootCreation(self):
         """
-        Verify that L{createChatRootWidget} gives back a L{TopWindow} with a
-        L{TextOutput}, a L{StatusWidget}, and a L{LineInputWidget} as children.
+        Verify that L{createChatRootWidget} gives back a L{TopWindow} with an
+        L{OutputWidget}, a L{StatusWidget}, and a L{LineInputWidget} as
+        children.
         """
         def painter():
             pass
@@ -48,7 +49,7 @@ class WidgetLayoutTests(TestCase):
         self.failUnless(isinstance(vbox, VBox))
         self.assertEqual(len(vbox.children), 3)
         output, status, input = vbox.children
-        self.failUnless(isinstance(output, TextOutput))
+        self.failUnless(isinstance(output, OutputWidget))
         self.failUnless(isinstance(status, StatusWidget))
         self.assertIdentical(status.model, statusModel)
         self.failUnless(isinstance(input, LineInputWidget))
@@ -86,7 +87,7 @@ class UserInterfaceTests(TestCase):
         reported in the output area.
         """
         ircTransport = StringIO()
-        ircProtocol = IRCClient()
+        ircProtocol = IRCClient(self.protocol)
         ircProtocol.makeConnection(ircTransport)
         self.protocol.makeConnection(self.terminal)
         self.protocol._cbNewServerConnection(ircProtocol, 'irc.example.org', 'testuser')
@@ -156,10 +157,13 @@ class InputParsingTests(TestCase):
             'USER testuser foo bar :None\r\n')
 
         output = str(self.terminal).splitlines()
+        input = output.pop()
+        status = output.pop()
         report = output.pop()
         for L in output:
-            self.assertEqual(L, '')
-        self.assertEqual(report, '== Connection to irc.example.org established.')
+            self.assertEqual(L, ' ' * 80)
+        message = '== Connection to irc.example.org established.'
+        self.assertEqual(report, message + ' ' * (80 - len(message)))
 
 
     def test_serverCommandFailedConnection(self):
@@ -170,13 +174,16 @@ class InputParsingTests(TestCase):
         self.assertEqual(len(self.tcpConnections), 1)
         self.assertEqual(self.tcpConnections[0][:2], ('irc.example.org', 6667))
         factory = self.tcpConnections[0][2]
-        factory.clientConnectionFailed(None, TimeoutError("mock timeout"))
+        factory.clientConnectionFailed(None, TimeoutError("mock"))
 
         while self.clock.calls:
             self.clock.advance(1)
 
         output = str(self.terminal).splitlines()
+        input = output.pop()
+        status = output.pop()
         report = output.pop()
         for L in output:
-            self.assertEqual(L, '')
-        self.assertEqual(report, '== Connection to irc.example.org failed: TimeoutError')
+            self.assertEqual(L, ' ' * 80)
+        message = '== irc.example.org failed: User timeout caused connection failure: mock.'
+        self.assertEqual(report, message + ' ' * (80 - len(message)))

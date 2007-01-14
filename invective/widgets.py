@@ -4,7 +4,9 @@
 Insults Widgets used by the Invective user-interface.
 """
 
-from twisted.conch.insults.window import YieldFocus, Widget, TextInput
+from textwrap import wrap
+
+from twisted.conch.insults.window import YieldFocus, Widget, TextInput, TextOutput
 
 from invective import version
 
@@ -136,3 +138,32 @@ class StatusWidget(Widget):
 
         terminal.cursorPosition(0, 0)
         terminal.write('[%(version)s] %(focusedChannel)s' % info)
+
+
+
+class OutputWidget(TextOutput):
+    def __init__(self, size=None):
+        super(OutputWidget, self).__init__(size)
+        self.messages = []
+
+
+    def formatMessage(self, s, width):
+        return wrap(s, width=width, subsequent_indent="  ")
+
+
+    def addMessage(self, message):
+        self.messages.append(message)
+        self.repaint()
+
+
+    def render(self, width, height, terminal):
+        output = []
+        for i in xrange(len(self.messages) - 1, -1, -1):
+            output[:0] = self.formatMessage(self.messages[i], width - 2)
+            if len(output) >= height:
+                break
+        if len(output) < height:
+            output[:0] = [''] * (height - len(output))
+        for n, L in enumerate(output):
+            terminal.cursorPosition(0, n)
+            terminal.write(L + ' ' * (width - len(L)))
