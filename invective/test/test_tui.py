@@ -3,7 +3,10 @@
 Tests for the top-level TUI code.
 """
 
+from StringIO import StringIO
+
 from twisted.trial.unittest import TestCase
+from twisted.internet.error import TimeoutError
 from twisted.conch.insults.window import TopWindow, VBox, TextOutput
 from twisted.conch.insults.helper import TerminalBuffer
 from twisted.conch.insults.insults import privateModes
@@ -64,10 +67,6 @@ class UserInterfaceTests(TestCase):
         """
         # Scribble on the terminal so we can tell that it gets cleared.
         self.terminal.write('test bytes')
-        # And explicitly enable the cursor, although I think it is probably the
-        # case that this should be the default mode.
-        self.terminal.setModes([privateModes.CURSOR_MODE])
-
         self.protocol.makeConnection(self.terminal)
         self.failUnless(str(self.terminal).isspace())
         self.failIfIn(privateModes.CURSOR_MODE, self.terminal.privateModes)
@@ -84,13 +83,81 @@ class InputParsingTests(TestCase):
         self.terminal = TerminalBuffer()
         self.terminal.makeConnection(self.transport)
         self.protocol = UserInterface()
+        self.protocol.reactor = self
+        self.protocol.makeConnection(self.terminal)
+
+        self.tcpConnections = []
+        self.delayedCalls = []
 
 
-    def test_quitCommand(self):
+    def connectTCP(self, host, port, factory, timeout=30, bindAddress=''):
+        self.tcpConnections.append((host, port, factory, timeout, bindAddress))
+
+
+    def callLater(self, n, f, *a, **kw):
+        self.delayedCalls.append((n, f, a, kw))
+
+
+    def test_commandDispatch(self):
         """
-        Verify that C{/quit} is interpreted as a command to disconnect and exit.
+        Verify that a line starting with C{/} and a word is dispatched to a
+        function determined by that word.
         """
-        quitWith = []
-        self.protocol.cmd_QUIT = quitWith.append
-        self.protocol.parseInputLine('/quit')
-        self.assertEqual(quitWith, ['/quit'])
+        dispatched = []
+        self.protocol.cmd_DISPATCHTEST = dispatched.append
+        self.protocol.parseInputLine('/dispatchtest')
+        self.assertEqual(dispatched, ['/dispatchtest'])
+
+
+    def test_serverCommand(self):
+        """
+        Verify that C{/server} is interpreted as a command to establish a new
+        server connection.  Also some more things (that a connection attempt is
+        made, that when it succeeds an IRC login is attempted over it with the
+        right nickname).
+
+        This is poorly factored.  IRC testing should be done elsewhere.
+        Connection setup testing should be done elsewhere.
+        """
+        self.protocol.cmd_SERVER('/server irc.example.org')
+        self.assertEqual(len(self.tcpConnections), 1)
+        self.assertEqual(self.tcpConnections[0][:2], ('irc.example.org', 6667))
+        factory = self.tcpConnections[0][2]
+        protocol = factory.buildProtocol(('irc.example.org', 6667))
+        transport = StringIO()
+        protocol.makeConnection(transport)
+        self.assertEqual(transport.getvalue(), '')
+        self.assertEqual(len(self.delayedCalls), 1)
+
+        self.protocol.nickname = 'testuser'
+
+        n, f, a, kw = self.delayedCalls.pop()
+        f(*a, **kw)
+
+        self.assertEqual(
+            transport.getvalue(),
+            'NICK testuser\r\n'
+            'USER testuser foo bar :None\r\n')
+
+        output = str(self.terminal).splitlines()
+        report = output.pop()
+        for L in output:
+            self.assertEqual(L, '')
+        self.assertEqual(report, '== Connection to irc.example.org established.')
+
+
+    def test_serverCommandFailedConnection(self):
+        """
+        Like L{test_serverCommand} but for a connection which fails.
+        """
+        self.protocol.cmd_SERVER('/server irc.example.org')
+        self.assertEqual(len(self.tcpConnections), 1)
+        self.assertEqual(self.tcpConnections[0][:2], ('irc.example.org', 6667))
+        factory = self.tcpConnections[0][2]
+        factory.clientConnectionFailed(None, TimeoutError("mock timeout"))
+
+        output = str(self.terminal).splitlines()
+        report = output.pop()
+        for L in output:
+            self.assertEqual(L, '')
+        self.assertEqual(report, '== Connection to irc.example.org failed: TimeoutError')
