@@ -6,7 +6,7 @@ Create and arrange widgets to form an IRC client.
 
 from twisted.internet import reactor
 
-from twisted.conch.insults.insults import TerminalProtocol
+from twisted.conch.insults.insults import TerminalProtocol, privateModes
 from twisted.conch.insults.window import TopWindow, VBox, TextOutput
 
 from invective.widgets import LineInputWidget
@@ -40,6 +40,7 @@ class UserInterface(TerminalProtocol):
     def connectionMade(self):
         super(UserInterface, self).connectionMade()
         self.terminal.reset()
+        self.terminal.resetModes([privateModes.CURSOR_MODE])
         self.rootWidget = createChatRootWidget(self.width, self.height, self._painter, self._controller)
 
 

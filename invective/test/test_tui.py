@@ -6,6 +6,7 @@ Tests for the top-level TUI code.
 from twisted.trial.unittest import TestCase
 from twisted.conch.insults.window import TopWindow, VBox, TextOutput
 from twisted.conch.insults.helper import TerminalBuffer
+from twisted.conch.insults.insults import privateModes
 
 from invective.widgets import LineInputWidget
 from invective.tui import createChatRootWidget, UserInterface
@@ -54,9 +55,14 @@ class UserInterfaceTests(TestCase):
     def test_initialState(self):
         """
         Test that immediately after a connection is established the screen is
-        cleared.
+        cleared and cursor display is disabled.
         """
         # Scribble on the terminal so we can tell that it gets cleared.
         self.terminal.write('test bytes')
+        # And explicitly enable the cursor, although I think it is probably the
+        # case that this should be the default mode.
+        self.terminal.setModes([privateModes.CURSOR_MODE])
+
         self.protocol.makeConnection(self.terminal)
         self.failUnless(str(self.terminal).isspace())
+        self.failIfIn(privateModes.CURSOR_MODE, self.terminal.modes)
