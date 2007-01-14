@@ -71,3 +71,26 @@ class UserInterfaceTests(TestCase):
         self.protocol.makeConnection(self.terminal)
         self.failUnless(str(self.terminal).isspace())
         self.failIfIn(privateModes.CURSOR_MODE, self.terminal.privateModes)
+
+
+
+class InputParsingTests(TestCase):
+    """
+    Tests for dealing with user input which may contain commands or be a
+    message destined for the network.
+    """
+    def setUp(self):
+        self.transport = None
+        self.terminal = TerminalBuffer()
+        self.terminal.makeConnection(self.transport)
+        self.protocol = UserInterface()
+
+
+    def test_quitCommand(self):
+        """
+        Verify that C{/quit} is interpreted as a command to disconnect and exit.
+        """
+        quitWith = []
+        self.protocol.cmd_QUIT = quitWith.append
+        self.protocol.parseInputLine('/quit')
+        self.assertEqual(quitWith, ['/quit'])

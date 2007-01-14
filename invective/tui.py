@@ -34,8 +34,14 @@ class UserInterface(TerminalProtocol):
         self.rootWidget.draw(self.width, self.height, self.terminal)
 
 
-    def _controller(self, line):
-        pass
+    def cmd_QUIT(self, line):
+        self.terminal.setPrivateModes([privateModes.CURSOR_MODE])
+        self.terminal.loseConnection()
+
+
+    def parseInputLine(self, line):
+        if line[:1] == '/':
+            getattr(self, 'cmd_' + line[1:].split()[0].upper())(line)
 
 
     def connectionMade(self):
@@ -44,7 +50,7 @@ class UserInterface(TerminalProtocol):
         self.terminal.resetPrivateModes([privateModes.CURSOR_MODE])
         self.rootWidget = createChatRootWidget(
             self.width - 2, self.height,
-            self._painter, self, self._controller)
+            self._painter, self, self.parseInputLine)
 
 
     def connectionLost(self, reason):
