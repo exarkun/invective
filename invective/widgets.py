@@ -1,11 +1,13 @@
-# -*- test-case-name: invective.test.test_input -*-
+# -*- test-case-name: invective.test -*-
 
 """
 Insults Widgets used by the Invective user-interface.
 """
 
+from twisted.conch.insults.window import YieldFocus, Widget, TextInput
 
-from twisted.conch.insults.window import TextInput
+from invective import version
+
 
 class LineInputWidget(TextInput):
     """
@@ -80,3 +82,46 @@ class LineInputWidget(TextInput):
             getattr(self, 'func_' + modifier.name + '_' + keyID)()
         else:
             super(LineInputWidget, self).characterReceived(keyID, modifier)
+
+
+
+class StatusWidget(Widget):
+    """
+    Display status information such as channel activity and modes.
+    """
+    def __init__(self, statusModel):
+        super(StatusWidget, self).__init__()
+        self.model = statusModel
+
+
+    def sizeHint(self):
+        """
+        Hint to the containing widget how large this widget should be.
+
+        There is always only one line of status information, so request a
+        height of one.  We will try to cope with any width, so do not provide a
+        width hint.
+        """
+        return (None, 1)
+
+
+    def focusReceived(self):
+        """
+        Reject focus whenever it comes to us.
+        """
+        raise YieldFocus()
+
+
+    def render(self, width, height, terminal):
+        """
+        Display invective version information and information about the state
+        of the model we were constructed with.
+        """
+        info = {'version': version}
+        chan = self.model.focusedChannel()
+        if chan is None:
+            chan = '(No Channel)'
+        info['focusedChannel'] = chan
+
+        terminal.cursorPosition(0, 0)
+        terminal.write('[%(version)s] %(focusedChannel)s' % info)

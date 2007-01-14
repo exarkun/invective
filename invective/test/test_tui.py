@@ -8,7 +8,7 @@ from twisted.conch.insults.window import TopWindow, VBox, TextOutput
 from twisted.conch.insults.helper import TerminalBuffer
 from twisted.conch.insults.insults import privateModes
 
-from invective.widgets import LineInputWidget
+from invective.widgets import LineInputWidget, StatusWidget
 from invective.tui import createChatRootWidget, UserInterface
 
 
@@ -19,7 +19,7 @@ class WidgetLayoutTests(TestCase):
     def test_rootCreation(self):
         """
         Verify that L{createChatRootWidget} gives back a L{TopWindow} with a
-        L{TextOutput} and a L{LineInputWidget} as children.
+        L{TextOutput}, a L{StatusWidget}, and a L{LineInputWidget} as children.
         """
         def painter():
             pass
@@ -27,17 +27,22 @@ class WidgetLayoutTests(TestCase):
         def controller(line):
             pass
 
-        root = createChatRootWidget(80, 24, painter, controller)
+        statusModel = object()
+
+        root = createChatRootWidget(80, 24, painter, statusModel, controller)
         self.failUnless(isinstance(root, TopWindow))
         self.assertIdentical(root.painter, painter)
         self.assertEqual(len(root.children), 1)
         vbox = root.children[0]
         self.failUnless(isinstance(vbox, VBox))
-        self.assertEqual(len(vbox.children), 2)
-        output, input = vbox.children
+        self.assertEqual(len(vbox.children), 3)
+        output, status, input = vbox.children
         self.failUnless(isinstance(output, TextOutput))
+        self.failUnless(isinstance(status, StatusWidget))
+        self.assertIdentical(status.model, statusModel)
         self.failUnless(isinstance(input, LineInputWidget))
         self.assertIdentical(input._realSubmit, controller)
+
 
 
 class UserInterfaceTests(TestCase):
