@@ -65,4 +65,4 @@ class UserInterfaceTests(TestCase):
 
         self.protocol.makeConnection(self.terminal)
         self.failUnless(str(self.terminal).isspace())
-        self.failIfIn(privateModes.CURSOR_MODE, self.terminal.modes)
+        self.failIfIn(privateModes.CURSOR_MODE, self.terminal.privateModes)

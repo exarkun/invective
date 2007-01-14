@@ -39,9 +39,9 @@ class UserInterface(TerminalProtocol):
 
     def connectionMade(self):
         super(UserInterface, self).connectionMade()
-        self.terminal.reset()
-        self.terminal.resetModes([privateModes.CURSOR_MODE])
-        self.rootWidget = createChatRootWidget(self.width, self.height, self._painter, self._controller)
+        self.terminal.eraseDisplay()
+        self.terminal.resetPrivateModes([privateModes.CURSOR_MODE])
+        self.rootWidget = createChatRootWidget(self.width - 2, self.height, self._painter, self._controller)
 
 
     def connectionLost(self, reason):
