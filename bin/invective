@@ -1,0 +1,4 @@
+#!/usr/bin/python
+
+from invective.scripts.invect import main
+main()

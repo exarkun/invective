@@ -4,6 +4,11 @@
 Create and arrange widgets to form an IRC client.
 """
 
+from signal import signal, SIGWINCH
+from fcntl import ioctl
+from tty import TIOCGWINSZ
+from struct import unpack
+
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientCreator
 
@@ -41,6 +46,10 @@ class UserInterface(TerminalProtocol):
         self.rootWidget.draw(self.width, self.height, self.terminal)
 
 
+    def statusChanged(self):
+        self.rootWidget.children[0].children[1].repaint()
+
+
     def addOutputMessage(self, msg):
         return self.rootWidget.children[0].children[0].addMessage(msg)
 
@@ -57,6 +66,7 @@ class UserInterface(TerminalProtocol):
             channel = line.split()[1]
             self.proto.join(channel)
             self.channel = channel
+            self.statusChanged()
 
 
     def cmd_PART(self, line):
@@ -66,6 +76,7 @@ class UserInterface(TerminalProtocol):
             channel = line.split()[1]
             self.proto.part(channel)
             self.channel = None
+            self.statusChanged()
 
 
     def cmd_QUIT(self, line):
@@ -128,12 +139,14 @@ class UserInterface(TerminalProtocol):
             self._painter, self, self.parseInputLine)
 
 
-    def connectionLost(self, reason):
-        reactor.stop()
-
-
     def keystrokeReceived(self, keyID, modifier):
         self.rootWidget.keystrokeReceived(keyID, modifier)
+
+
+    def terminalSize(self, width, height):
+        self.width = width
+        self.height = height
+        self._painter()
 
 
     # IStatusModel
@@ -152,3 +165,41 @@ class UserInterface(TerminalProtocol):
 
     def channelLeft(self, channel):
         self.addOutputMessage('== left %s' % (channel,))
+        if channel == self.channel:
+            self.channel = None
+            self.statusChanged()
+
+
+    def userJoined(self, channel, nick):
+        self.addOutputMessage('== %s joined %s' % (nick, channel))
+
+
+    def userLeft(self, channel, nick):
+        self.addOutputMessage('== %s left %s' % (nick, channel))
+
+
+
+class CommandLineUserInterface(UserInterface):
+    def connectionMade(self):
+        signal(SIGWINCH, self.windowChanged)
+        winSize = self.getWindowSize()
+        self.width = winSize[0]
+        self.height = winSize[1]
+        super(CommandLineUserInterface, self).connectionMade()
+
+
+    def connectionLost(self, reason):
+        reactor.stop()
+
+
+    # XXX Should be part of runWithProtocol
+    def getWindowSize(self):
+        winsz = ioctl(0, TIOCGWINSZ, '12345678')
+        winSize = unpack('4H', winsz)
+        newSize = winSize[1], winSize[0], winSize[3], winSize[2]
+        return newSize
+
+
+    def windowChanged(self, signum, frame):
+        winSize = self.getWindowSize()
+        self.terminalSize(winSize[0], winSize[1])

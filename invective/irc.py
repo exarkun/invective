@@ -31,6 +31,13 @@ class IRCClient(BaseIRCClient):
         self.observer.channelLeft(channel)
 
 
+    def userJoined(self, nick, channel):
+        self.observer.userJoined(channel, nick)
+
+
+    def userLeft(self, nick, channel):
+        self.observer.userLeft(channel, nick)
+
 
 __all__ = ['IRCClient']
 

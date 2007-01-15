@@ -61,9 +61,8 @@ class StatusWidgetTests(TestCase):
         """
         status = StatusWidget(DummyModel(None))
         status.render(self.width, self.height, self.terminal)
-        self.assertEqual(
-            str(self.terminal),
-            '[%s] (No Channel)' % (version,))
+        expected = '[%s] (No Channel)' % (version,)
+        self.assertEqual(str(self.terminal), expected + ' ' * (self.width - len(expected)))
 
 
     def test_withChannelRendering(self):
@@ -74,6 +73,20 @@ class StatusWidgetTests(TestCase):
         channel = '#example'
         status = StatusWidget(DummyModel(channel))
         status.render(self.width, self.height, self.terminal)
-        self.assertEqual(
-            str(self.terminal),
-            '[%s] %s' % (version, channel))
+        expected = '[%s] %s' % (version, channel)
+        self.assertEqual(str(self.terminal), expected + ' ' * (self.width - len(expected)))
+
+
+    def test_shortenedStatus(self):
+        """
+        Verify that if a new status is shorter than the previous status, the
+        previous status is completely erased.
+        """
+        longChannel = '#long-channel-name'
+        shortChannel = '#short'
+        status = StatusWidget(DummyModel(longChannel))
+        status.render(self.width, self.height, self.terminal)
+        status = StatusWidget(DummyModel(shortChannel))
+        status.render(self.width, self.height, self.terminal)
+        expected = '[%s] %s' % (version, shortChannel)
+        self.assertEqual(str(self.terminal), expected + ' ' * (self.width - len(expected)))

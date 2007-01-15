@@ -137,7 +137,8 @@ class StatusWidget(Widget):
         info['focusedChannel'] = chan
 
         terminal.cursorPosition(0, 0)
-        terminal.write('[%(version)s] %(focusedChannel)s' % info)
+        status = '[%(version)s] %(focusedChannel)s' % info
+        terminal.write(status + ' ' * (width - len(status)))
 
 
 
