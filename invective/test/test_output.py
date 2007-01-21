@@ -65,3 +65,25 @@ class TextOutputTests(TestCase):
         self.assertEqual(first, firstMessage + ' ' * (self.width - len(firstMessage)))
         self.assertEqual(second, secondMessage + ' ' * (self.width - len(secondMessage)))
 
+
+    def test_messageWrapping(self):
+        """
+        Verify that a message longer than the terminal is wide is wrapped
+        appropriately.
+        """
+        # 18 characters
+        message = 'very long message '
+
+        # 90 characters
+        longMessage = message * 5
+
+        self.widget.addMessage(longMessage)
+        self.widget.render(self.width, self.height, self.terminal)
+
+        output = str(self.terminal).splitlines()
+        secondLine = output.pop()
+        firstLine = output.pop()
+        for L in output:
+            self.assertEqual(L, ' ' * self.width)
+        self.assertEqual(firstLine, 'very long message ' * 4 + 'very    ')
+        self.assertEqual(secondLine, '  long message' + ' ' * (self.width - 14))

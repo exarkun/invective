@@ -18,9 +18,12 @@ from twisted.conch.insults.window import TopWindow, VBox
 from invective.widgets import LineInputWidget, StatusWidget, OutputWidget
 from invective.irc import IRCClient
 
+
 # XXX TODO - Use Glade
 def createChatRootWidget(reactor, width, height, painter, statusModel, controller):
-    root = TopWindow(painter)
+    def _schedule(f):
+        reactor.callLater(0, f)
+    root = TopWindow(painter, _schedule)
     root.reactor = reactor
     vbox = VBox()
     vbox.addChild(OutputWidget())
