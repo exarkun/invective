@@ -7,3 +7,4 @@ in an arbitrary order:
  * implement nick changing
  * implement topic display and changing
  * implement per-channel name display
+ * handle IRC color codes
