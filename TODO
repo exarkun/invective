@@ -8,3 +8,4 @@ in an arbitrary order:
  * implement topic display and changing
  * implement per-channel name display
  * handle IRC color codes
+ * implement screen redraw (ie C-l)
