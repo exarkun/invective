@@ -9,3 +9,10 @@ in an arbitrary order:
  * implement per-channel name display
  * handle IRC color codes
  * implement screen redraw (ie C-l)
+ * automatically resizable input area - gains/loses height as appropriate
+   for current input buffer
+ * input history
+ * history searching w/ C-s and C-r
+ * slide out overlay widget for things like name listing
+ * wm decorations for sizing and location
+ * okay, fine: a window manager
