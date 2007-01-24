@@ -333,3 +333,30 @@ class InputTests(TestCase):
         self.widget.keystrokeReceived('y', ServerProtocol.ALT)
         self.assertEqual(self.widget.buffer, s[:n] + 'onex' + s[n:])
         self.assertEqual(self.widget.cursor, n + len('onex'))
+
+
+    def test_forwardCharacter(self):
+        """
+        Verify that C-f moves the cursor forward one position.
+        """
+        s = 'hello world'
+        n = 5
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.keystrokeReceived('\x06', None) # C-f
+        self.assertEqual(self.widget.buffer, s)
+        self.assertEqual(self.widget.cursor, n + 1)
+
+
+    def test_forwardCharacterAtEndOfBuffer(self):
+        """
+        Verify that C-f when the cursor is at the end of the buffer does
+        nothing.
+        """
+        s = 'hello world'
+        n = len(s)
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.keystrokeReceived('\x06', None) # C-f
+        self.assertEqual(self.widget.buffer, s)
+        self.assertEqual(self.widget.cursor, n)
