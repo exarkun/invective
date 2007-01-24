@@ -268,6 +268,41 @@ class InputTests(TestCase):
         self.assertEqual(self.widget.killRing, ['three', 'one', 'two'])
 
 
+    def test_yankPopWithOneKilled(self):
+        """
+        Verify that M-y works properly if there is exactly one string in the
+        kill ring.
+        """
+        s = 'hello world'
+        n = 5
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.killRing = ['one']
+        self.widget.keystrokeReceived('\x19', None)
+        self.widget.keystrokeReceived('y', ServerProtocol.ALT)
+        self.assertEqual(self.widget.buffer, s[:n] + 'one' + s[n:])
+        self.assertEqual(self.widget.cursor, n + len('one'))
+        self.assertEqual(self.widget.killRing, ['one'])
+
+
+    def test_yankPopTwice(self):
+        """
+        Verify that M-y twice in a row after C-y properly cycles through the
+        kill ring.
+        """
+        s = 'hello world'
+        n = 5
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.killRing = ['last', 'second', 'first']
+        self.widget.keystrokeReceived('\x19', None)
+        self.widget.keystrokeReceived('y', ServerProtocol.ALT)
+        self.widget.keystrokeReceived('y', ServerProtocol.ALT)
+        self.assertEqual(self.widget.buffer, s[:n] + 'last' + s[n:])
+        self.assertEqual(self.widget.cursor, n + len('last'))
+        self.assertEqual(self.widget.killRing, ['second', 'first', 'last'])
+
+
     def test_yankPopWithoutYank(self):
         """
         Verify that M-y does nothing if not preceeded by C-y.

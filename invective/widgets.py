@@ -6,6 +6,7 @@ Insults Widgets used by the Invective user-interface.
 
 from textwrap import wrap
 
+from twisted.conch.insults.insults import ServerProtocol
 from twisted.conch.insults.window import YieldFocus, Widget, TextInput, TextOutput
 
 from invective import version
@@ -108,10 +109,10 @@ class LineInputWidget(TextInput):
         Handle M-y by cycling the kill ring and replacing the previously yanked
         text with the new final element in the ring.
         """
-        if self.previousKeystroke == ('\x19', None): # C-y
+        if self.previousKeystroke in (('\x19', None), ('y', ServerProtocol.ALT)): # C-y and M-y
             previous = self.killRing.pop()
-            next = self.killRing[-1]
             self.killRing.insert(0, previous)
+            next = self.killRing[-1]
 
             self.cursor -= len(previous)
             self.buffer = self.buffer[:self.cursor] + next + self.buffer[self.cursor + len(previous):]
