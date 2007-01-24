@@ -36,9 +36,7 @@ class LineInputWidget(TextInput):
         Handle the home function key by repositioning the cursor at the
         beginning of the input area.
         """
-        if self.cursor != 0:
-            self.cursor = 0
-            self.repaint()
+        self.cursor = 0
 
 
     def func_END(self, modifier):
@@ -46,10 +44,7 @@ class LineInputWidget(TextInput):
         Handle the end function key by repositioning the cursor just past the
         end of the text in the input area.
         """
-        pos = len(self.buffer)
-        if self.cursor != pos:
-            self.cursor = pos
-            self.repaint()
+        self.cursor = len(self.buffer)
 
 
     def func_ALT_b(self):
@@ -59,13 +54,10 @@ class LineInputWidget(TextInput):
         Words are considered non-whitespace characters delimited by whitespace
         characters.
         """
-        initial = self.cursor
         while self.cursor > 0 and self.buffer[self.cursor - 1].isspace():
             self.cursor -= 1
         while self.cursor > 0 and not self.buffer[self.cursor - 1].isspace():
             self.cursor -= 1
-        if self.cursor != initial:
-            self.repaint()
 
 
     def func_ALT_f(self):
@@ -75,14 +67,11 @@ class LineInputWidget(TextInput):
         are considered non-whitespace characters delimited by whitespace
         characters.
         """
-        initial = self.cursor
         n = len(self.buffer)
         while self.cursor < n and self.buffer[self.cursor].isspace():
             self.cursor += 1
         while self.cursor < n and not self.buffer[self.cursor].isspace():
             self.cursor += 1
-        if initial != self.cursor:
-            self.repaint()
 
 
     def func_CTRL_k(self):
@@ -94,6 +83,19 @@ class LineInputWidget(TextInput):
         self.buffer = self.buffer[:self.cursor]
         if chopped:
             self.killRing.append(chopped)
+
+
+    def keystrokeReceived(self, keyID, modifier):
+        """
+        Override the inherited behavior to track whether either the cursor
+        position or buffer contents change and automatically request a repaint
+        if either does.
+        """
+        buffer = self.buffer
+        cursor = self.cursor
+        super(LineInputWidget, self).keystrokeReceived(keyID, modifier)
+        if self.buffer != buffer or self.cursor != cursor:
+            self.repaint()
 
 
     def characterReceived(self, keyID, modifier):
