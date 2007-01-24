@@ -193,3 +193,30 @@ class InputTests(TestCase):
         self.failIf(self.painted)
         self.assertEqual(self.widget.buffer, 'X')
         self.assertEqual(self.widget.cursor, 1)
+
+
+    def test_emptyKill(self):
+        """
+        Verify that if C-k is received when the cursor is at the end of the
+        buffer, no state changes.
+        """
+        s = 'hello world'
+        self.widget.buffer = s
+        self.widget.cursor = len(s)
+        self.widget.keystrokeReceived('\x0b', None) # C-k
+        self.assertEqual(self.widget.buffer, s)
+        self.assertEqual(self.widget.killRing, [])
+
+
+    def test_kill(self):
+        """
+        Verify that C-k deletes from the cursor to the end of the line and adds
+        that text to the kill ring.
+        """
+        s = 'hello world'
+        n = 5
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.keystrokeReceived('\x0b', None) # C-k
+        self.assertEqual(self.widget.buffer, s[:n])
+        self.assertEqual(self.widget.killRing, [s[n:]])

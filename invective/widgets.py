@@ -18,6 +18,7 @@ class LineInputWidget(TextInput):
 
     def __init__(self, maxWidth, onSubmit):
         self._realSubmit = onSubmit
+        self.killRing = []
         super(LineInputWidget, self).__init__(maxWidth, self._onSubmit)
 
 
@@ -84,6 +85,17 @@ class LineInputWidget(TextInput):
             self.repaint()
 
 
+    def func_CTRL_k(self):
+        """
+        Handle C-k by truncating the line from the character beneath the cursor
+        and adding the removed text to the kill ring.
+        """
+        chopped = self.buffer[self.cursor:]
+        self.buffer = self.buffer[:self.cursor]
+        if chopped:
+            self.killRing.append(chopped)
+
+
     def characterReceived(self, keyID, modifier):
         """
         Handle a single non-function key, possibly with a modifier.
@@ -93,6 +105,8 @@ class LineInputWidget(TextInput):
         """
         if modifier is not None:
             getattr(self, 'func_' + modifier.name + '_' + keyID)()
+        elif ord(keyID) <= 26 and keyID != '\r':
+            getattr(self, 'func_CTRL_' + chr(ord(keyID) + ord('a') - 1))()
         else:
             super(LineInputWidget, self).characterReceived(keyID, modifier)
 
