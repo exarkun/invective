@@ -14,7 +14,14 @@ from invective import version
 class LineInputWidget(TextInput):
     """
     Single-line input area with history and function keys.
+
+    @ivar previousKeystroke: A reference to the most recently received
+    keystroke, updated after each keystroke is processed.
+
+    @ivar killRing: A list of killed strings, in order of oldest to newest.
     """
+
+    previousKeystroke = None
 
     def __init__(self, maxWidth, onSubmit):
         self._realSubmit = onSubmit
@@ -85,6 +92,32 @@ class LineInputWidget(TextInput):
             self.killRing.append(chopped)
 
 
+    def func_CTRL_y(self):
+        """
+        Handle C-y by inserting an element from the kill ring at the current
+        cursor position, moving the cursor to the end of the inserted text.
+        """
+        if self.killRing:
+            insert = self.killRing[-1]
+            self.buffer = self.buffer[:self.cursor] + insert + self.buffer[self.cursor:]
+            self.cursor += len(insert)
+
+
+    def func_ALT_y(self):
+        """
+        Handle M-y by cycling the kill ring and replacing the previously yanked
+        text with the new final element in the ring.
+        """
+        if self.previousKeystroke == ('\x19', None): # C-y
+            previous = self.killRing.pop()
+            next = self.killRing[-1]
+            self.killRing.insert(0, previous)
+
+            self.cursor -= len(previous)
+            self.buffer = self.buffer[:self.cursor] + next + self.buffer[self.cursor + len(previous):]
+            self.cursor += len(next)
+
+
     def keystrokeReceived(self, keyID, modifier):
         """
         Override the inherited behavior to track whether either the cursor
@@ -94,6 +127,7 @@ class LineInputWidget(TextInput):
         buffer = self.buffer
         cursor = self.cursor
         super(LineInputWidget, self).keystrokeReceived(keyID, modifier)
+        self.previousKeystroke = (keyID, modifier)
         if self.buffer != buffer or self.cursor != cursor:
             self.repaint()
 

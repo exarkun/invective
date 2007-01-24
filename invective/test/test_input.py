@@ -220,3 +220,81 @@ class InputTests(TestCase):
         self.widget.keystrokeReceived('\x0b', None) # C-k
         self.assertEqual(self.widget.buffer, s[:n])
         self.assertEqual(self.widget.killRing, [s[n:]])
+
+
+    def test_yank(self):
+        """
+        Verify that C-y inserts the active element in the kill ring at the
+        current cursor position.
+        """
+        s = 'hello world'
+        n = 5
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.killRing = ['one', 'two', 'three']
+        self.widget.keystrokeReceived('\x19', None) # C-y
+        self.assertEqual(self.widget.buffer, s[:n] + 'three' + s[n:])
+        self.assertEqual(self.widget.cursor, n + len('three'))
+
+
+    def test_yankWithoutKillRing(self):
+        """
+        Verify that C-y with an empty kill ring does nothing.
+        """
+        s = 'hello world'
+        n = 5
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.killRing = []
+        self.widget.keystrokeReceived('\x19', None)
+        self.assertEqual(self.widget.buffer, s)
+        self.assertEqual(self.widget.cursor, n)
+
+
+    def test_yankPop(self):
+        """
+        Verify that M-y cycles through the kill ring, replacing the previously
+        yanked value with the next element from the kill ring.
+        """
+        s = 'hello world'
+        n = 5
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.killRing = ['one', 'two', 'three']
+        self.widget.keystrokeReceived('\x19', None) # C-y
+        self.widget.keystrokeReceived('y', ServerProtocol.ALT)
+        self.assertEqual(self.widget.buffer, s[:n] + 'two' + s[n:])
+        self.assertEqual(self.widget.cursor, n + len('two'))
+        self.assertEqual(self.widget.killRing, ['three', 'one', 'two'])
+
+
+    def test_yankPopWithoutYank(self):
+        """
+        Verify that M-y does nothing if not preceeded by C-y.
+        """
+        s = 'hello world'
+        n = 5
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.killRing = ['one']
+        self.widget.keystrokeReceived('y', ServerProtocol.ALT)
+        self.assertEqual(self.widget.buffer, s)
+        self.assertEqual(self.widget.cursor, n)
+        self.assertEqual(self.widget.killRing, ['one'])
+
+
+    def test_yankPopAfterNotYank(self):
+        """
+        Verify that any command inserted between a C-y and an M-y disrupts the
+        M-y.
+        """
+        s = 'hello world'
+        n = 5
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.killRing = ['one']
+        self.widget.keystrokeReceived('\x19', None)
+        self.widget.keystrokeReceived('x', None)
+        self.widget.keystrokeReceived('y', ServerProtocol.ALT)
+        self.assertEqual(self.widget.buffer, s[:n] + 'onex' + s[n:])
+        self.assertEqual(self.widget.cursor, n + len('onex'))
