@@ -360,3 +360,30 @@ class InputTests(TestCase):
         self.widget.keystrokeReceived('\x06', None) # C-f
         self.assertEqual(self.widget.buffer, s)
         self.assertEqual(self.widget.cursor, n)
+
+
+    def test_backwardCharacter(self):
+        """
+        Verify that C-b moves the cursor backward on position.
+        """
+        s = 'hello world'
+        n = 5
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.keystrokeReceived('\x02', None) # C-b
+        self.assertEqual(self.widget.buffer, s)
+        self.assertEqual(self.widget.cursor, n - 1)
+
+
+    def test_backwardCharacterAtBeginningOfBuffer(self):
+        """
+        Verify that C-b when the cursor is at the beginning of the buffer
+        does nothing.
+        """
+        s = 'hello world'
+        n = 0
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.keystrokeReceived('\x02', None) # C-b
+        self.assertEqual(self.widget.buffer, s)
+        self.assertEqual(self.widget.cursor, n)

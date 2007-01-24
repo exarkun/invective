@@ -2,8 +2,6 @@ in an arbitrary order:
 
  * set up a ticket tracker
  * implement DELETE handling
- * implement C-k handling
- * implement C-b
  * implement nick changing
  * implement topic display and changing
  * implement per-channel name display

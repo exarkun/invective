@@ -54,6 +54,13 @@ class LineInputWidget(TextInput):
         self.cursor = min(self.cursor + 1, len(self.buffer))
 
 
+    def func_CTRL_b(self):
+        """
+        Handle C-b to move the cursor forward one position.
+        """
+        self.cursor = max(self.cursor - 1, 0)
+
+
     def func_END(self, modifier):
         """
         Handle the end function key by repositioning the cursor just past the
