@@ -84,29 +84,50 @@ class InputTests(TestCase):
         self.assertEqual(self.widget.buffer, '')
 
 
-    def test_home(self):
-        """
-        Test that the home key moves the cursor to the beginning of the line.
-        """
+    def _homeTest(self, key):
         self.widget.keystrokeReceived('X', None)
         self.painted = False
-        self.widget.keystrokeReceived(ServerProtocol.HOME, None)
+        self.widget.keystrokeReceived(key, None)
         self.failUnless(self.painted)
         self.assertEqual(self.widget.cursor, 0)
         self.assertEqual(self.widget.buffer, 'X')
+        
+
+    def test_homeFunctionKey(self):
+        """
+        Test that the home key moves the cursor to the beginning of the line.
+        """
+        return self._homeTest(ServerProtocol.HOME)
+
+
+    def test_home(self):
+        """
+        Test that C-a moves the cursor to the beginning of the line.
+        """
+        return self._homeTest('\x01')
+
+
+    def _endTest(self, key):
+        self.widget.keystrokeReceived('X', None)
+        self.widget.cursor = 0
+        self.painted = False
+        self.widget.keystrokeReceived(key, None)
+        self.failUnless(self.painted)
+        self.assertEqual(self.widget.cursor, 1)
+        self.assertEqual(self.widget.buffer, 'X')
+
+    def test_endFunctionKEy(self):
+        """
+        Test that the end key moves the cursor to the end of the line.
+        """
+        return self._endTest(ServerProtocol.END)
 
 
     def test_end(self):
         """
-        Test that the end key moves the cursor to the end of the line.
+        Test that C-e moves the cursor to the end of the line.
         """
-        self.widget.keystrokeReceived('X', None)
-        self.widget.cursor = 0
-        self.painted = False
-        self.widget.keystrokeReceived(ServerProtocol.END, None)
-        self.failUnless(self.painted)
-        self.assertEqual(self.widget.cursor, 1)
-        self.assertEqual(self.widget.buffer, 'X')
+        return self._endTest('\x05')
 
 
     def test_backwardWord(self):

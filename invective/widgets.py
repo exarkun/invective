@@ -47,6 +47,13 @@ class LineInputWidget(TextInput):
         self.cursor = 0
 
 
+    def func_CTRL_a(self):
+        """
+        Handle C-a in the same way as the home function key.
+        """
+        return self.func_HOME(None)
+
+
     def func_CTRL_f(self):
         """
         Handle C-f to move the cursor forward one position.
@@ -67,6 +74,13 @@ class LineInputWidget(TextInput):
         end of the text in the input area.
         """
         self.cursor = len(self.buffer)
+
+
+    def func_CTRL_e(self):
+        """
+        Handle C-e in the same way as the end function key.
+        """
+        return self.func_END(None)
 
 
     def func_ALT_b(self):
