@@ -84,6 +84,36 @@ class InputTests(TestCase):
         self.assertEqual(self.widget.buffer, '')
 
 
+    def test_unhandledFunction(self):
+        """
+        Verify that an unhandled function key has no consequences.
+        """
+        class Secret(object):
+            """
+            A special modifier which exists on no keyboard.
+            """
+            name = "SECRET"
+
+        self.widget.keystrokeReceived('a', Secret())
+        self.assertEqual(self.widget.buffer, '')
+        self.assertEqual(self.widget.cursor, 0)
+
+
+    def test_unhandledControl(self):
+        """
+        Verify that an unhandled C- combo doesn't alter the widget state.
+        """
+        s = 'hello world'
+        n = 5
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.killRing = ['a', 'b']
+        self.widget.keystrokeReceived('\x03', None)
+        self.assertEqual(self.widget.buffer, s)
+        self.assertEqual(self.widget.cursor, n)
+        self.assertEqual(self.widget.killRing, ['a', 'b'])
+
+
     def _homeTest(self, key):
         self.widget.keystrokeReceived('X', None)
         self.painted = False
@@ -91,7 +121,7 @@ class InputTests(TestCase):
         self.failUnless(self.painted)
         self.assertEqual(self.widget.cursor, 0)
         self.assertEqual(self.widget.buffer, 'X')
-        
+
 
     def test_homeFunctionKey(self):
         """

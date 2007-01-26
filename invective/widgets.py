@@ -169,9 +169,13 @@ class LineInputWidget(TextInput):
         dispatch to a function for the specific key and modifier present.
         """
         if modifier is not None:
-            getattr(self, 'func_' + modifier.name + '_' + keyID)()
+            f = getattr(self, 'func_' + modifier.name + '_' + keyID, None)
+            if f is not None:
+                f()
         elif ord(keyID) <= 26 and keyID != '\r':
-            getattr(self, 'func_CTRL_' + chr(ord(keyID) + ord('a') - 1))()
+            f = getattr(self, 'func_CTRL_' + chr(ord(keyID) + ord('a') - 1), None)
+            if f is not None:
+                f()
         else:
             super(LineInputWidget, self).characterReceived(keyID, modifier)
 
