@@ -8,6 +8,8 @@ from twisted.trial.unittest import TestCase
 from twisted.conch.insults.insults import ServerProtocol
 
 from invective.widgets import LineInputWidget
+from invective.history import History
+
 
 class InputTests(TestCase):
     """
@@ -26,6 +28,26 @@ class InputTests(TestCase):
 
     def repaint(self):
         self.painted = True
+
+
+    def test_initialization(self):
+        """
+        Verify that the input buffer, kill ring, and input history all start
+        empty, and at the cursor begins at the beginning of the line.
+        """
+        self.assertEqual(self.widget.buffer, '')
+        self.assertEqual(self.widget.cursor, 0)
+        self.assertEqual(self.widget.killRing, [])
+        self.assertEqual(self.widget.getInputHistory(), [])
+
+
+    def test_setInputHistory(self):
+        """
+        Verify that the input history can be explicitly set via
+        L{History.setInputHistory}.
+        """
+        self.widget.setInputHistory(History(["a", "b", "c"]))
+        self.assertEqual(self.widget.getInputHistory(), ["a", "b", "c"])
 
 
     def test_printable(self):
@@ -66,6 +88,29 @@ class InputTests(TestCase):
         self.failIf(self.painted)
         self.assertEqual(self.widget.cursor, 0)
         self.assertEqual(self.widget.buffer, '')
+
+
+    def test_delete(self):
+        """
+        Test that a delete keystroke removes a character from beneath the
+        cursor.
+        """
+        s = 'hello world'
+        n = 5
+        self.widget.buffer = s
+        self.widget.cursor = n
+        self.widget.keystrokeReceived(ServerProtocol.DELETE, None)
+        self.assertEqual(self.widget.buffer, s[:n] + s[n + 1:])
+        self.assertEqual(self.widget.cursor, n)
+
+
+    def test_deleteWhenEmpty(self):
+        """
+        Test that a delete keystroke when the buffer is empty does nothing.
+        """
+        self.widget.keystrokeReceived(ServerProtocol.DELETE, None)
+        self.assertEqual(self.widget.buffer, '')
+        self.assertEqual(self.widget.cursor, 0)
 
 
     def test_enter(self):
@@ -437,4 +482,184 @@ class InputTests(TestCase):
         self.widget.cursor = n
         self.widget.keystrokeReceived('\x02', None) # C-b
         self.assertEqual(self.widget.buffer, s)
+        self.assertEqual(self.widget.cursor, n)
+
+
+    def test_enterAppendsHistory(self):
+        """
+        Verify that a non-empty line is added to the input history when enter
+        is hit.
+        """
+        s = 'hello world'
+        self.widget.keystrokeReceived('\r', None)
+        self.assertEqual(self.widget.getInputHistory(), [])
+        self.widget.buffer = s
+        self.widget.keystrokeReceived('\r', None)
+        self.assertEqual(self.widget.getInputHistory(), [s])
+
+
+    def test_previousLine(self):
+        """
+        Verify that C-p replaces the current input buffer with the previous
+        line from the input history.
+        """
+        s = 'hello world'
+        self.widget.buffer = s
+        self.widget.setInputHistory(History(['first', 'second', 'last']))
+        self.widget.keystrokeReceived('\x10', None)
+        self.assertEqual(self.widget.buffer, 'last')
+        self.assertEqual(self.widget.cursor, 0)
+
+
+    def test_previousLineTwice(self):
+        """
+        Verify that C-p twice in a row results in the 2nd to last line from
+        the input history being placed in the input buffer.
+        """
+        s = 'hello world'
+        self.widget.buffer = s
+        self.widget.setInputHistory(History(['first', 'second', 'last']))
+        self.widget.keystrokeReceived('\x10', None)
+        self.widget.keystrokeReceived('\x10', None)
+        self.assertEqual(self.widget.buffer, 'second')
+        self.assertEqual(self.widget.cursor, 0)
+
+
+    def test_previousLineWithoutHistory(self):
+        """
+        Verify that C-p when there is no input history does nothing.
+        """
+        s = 'hello world'
+        self.widget.buffer = s
+        self.widget.setInputHistory(History([]))
+        self.widget.keystrokeReceived('\x10', None)
+        self.assertEqual(self.widget.buffer, s)
+        self.assertEqual(self.widget.cursor, 0)
+        self.assertEqual(self.widget.getInputHistory(), [])
+
+
+    def test_previousLineEmptyBuffer(self):
+        """
+        Verify that an empty line is not added to the input history when C-p is
+        received.
+        """
+        s = 'hello world'
+        self.widget.setInputHistory(History([s]))
+        self.widget.keystrokeReceived('\x10', None)
+        self.assertEqual(self.widget.getInputHistory(), [s])
+        self.assertEqual(self.widget.buffer, s)
+        self.assertEqual(self.widget.cursor, 0)
+
+
+    def test_previousLineEmptyBufferWithoutHistory(self):
+        """
+        Verify that an empty line is not added to the input history when C-p is
+        received and that no error occurs even if there is no input history.
+        """
+        self.widget.keystrokeReceived('\x10', None)
+        self.assertEqual(self.widget.getInputHistory(), [])
+        self.assertEqual(self.widget.buffer, '')
+        self.assertEqual(self.widget.cursor, 0)
+
+
+    def test_nextLine(self):
+        """
+        Verify that C-n replaces the current input buffer with the next line
+        from the input history.
+        """
+        s = 'hello world'
+        self.widget.buffer = s
+        history = History(['first', 'second', 'last'])
+        history.previousLine()
+        history.previousLine()
+        self.widget.setInputHistory(history)
+        self.widget.keystrokeReceived('\x0e', None)
+        self.assertEqual(self.widget.buffer, 'last')
+        self.assertEqual(self.widget.cursor, 0)
+
+
+    def test_nextLineAtEnd(self):
+        """
+        Verify that C-n does nothing to the input buffer when at the end of the
+        input history.
+        """
+        s = 'hello world'
+        self.widget.buffer = s
+        self.widget.setInputHistory(History(['first', 'second', 'last']))
+        self.widget.keystrokeReceived('\x0e', None)
+        self.assertEqual(self.widget.buffer, s)
+        self.assertEqual(self.widget.cursor, 0)
+
+
+    def test_nextLineTwice(self):
+        """
+        Verify that C-n twice in a row results in the 2nd to first line from
+        the input history being placed in the input buffer.
+        """
+        s = 'hello world'
+        self.widget.buffer = s
+        history = History(['first', 'second', 'last'])
+        history.previousLine()
+        history.previousLine()
+        history.previousLine()
+        self.widget.setInputHistory(history)
+        self.widget.keystrokeReceived('\x0e', None)
+        self.widget.keystrokeReceived('\x0e', None)
+        self.assertEqual(self.widget.buffer, 'last')
+        self.assertEqual(self.widget.cursor, 0)
+
+
+    def test_nextLineEmptyBuffer(self):
+        """
+        Verify that an empty line is not added to the input history when C-n is
+        received.
+        """
+        s = 'hello world'
+        self.widget.setInputHistory(History([s]))
+        self.widget.keystrokeReceived('\x0e', None)
+        self.assertEqual(self.widget.getInputHistory(), [s])
+        self.assertEqual(self.widget.buffer, "")
+        self.assertEqual(self.widget.cursor, 0)
+
+
+    def test_historyPositionResetByReturn(self):
+        """
+        Verify that C{'\r'} resets the history position to the end.
+        """
+        s1 = "hello"
+        s2 = "world"
+        s3 = "goodbye"
+        history = History([s1, s2, s3])
+        self.widget.setInputHistory(history)
+        self.widget.keystrokeReceived('\x10', None) # put s3 up
+        self.widget.keystrokeReceived('\x10', None) # put s2 up
+        self.widget.keystrokeReceived('\r', None) # submit s2
+
+        # s2 should be the previous line now, since it was added to the input
+        # history and the input history position was reset.
+        self.assertEqual(history.previousLine(), s2)
+
+        # Followed by s3, s2, and s1
+        self.assertEqual(history.previousLine(), s3)
+        self.assertEqual(history.previousLine(), s2)
+        self.assertEqual(history.previousLine(), s1)
+
+
+    def test_editBufferSaved(self):
+        """
+        Verify that the current edit buffer and cursor position is saved when
+        traversing the history and restored when C{nextLine} is invoked at the
+        end of the input history.
+        """
+        s1 = "hello"
+        s2 = "world"
+        n = 3
+        history = History([s1])
+        self.widget.buffer = s2
+        self.widget.cursor = n
+        self.widget.setInputHistory(history)
+        self.widget.keystrokeReceived('\x10', None)
+        self.assertEqual(self.widget.buffer, s1)
+        self.widget.keystrokeReceived('\x0e', None)
+        self.assertEqual(self.widget.buffer, s2)
         self.assertEqual(self.widget.cursor, n)

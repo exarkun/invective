@@ -10,6 +10,7 @@ from twisted.conch.insults.insults import ServerProtocol
 from twisted.conch.insults.window import YieldFocus, Widget, TextInput, TextOutput
 
 from invective import version
+from invective.history import History
 
 
 class LineInputWidget(TextInput):
@@ -20,14 +21,35 @@ class LineInputWidget(TextInput):
     keystroke, updated after each keystroke is processed.
 
     @ivar killRing: A list of killed strings, in order of oldest to newest.
+
+    @type savedBuffer: C{NoneType} or C{str}
+    @ivar savedBuffer: The string in the edit buffer at the time a history
+    traversal command was first invoked, or C{None} if the history is not
+    currently being traversed.
     """
 
     previousKeystroke = None
+    savedBuffer = None
 
     def __init__(self, maxWidth, onSubmit):
         self._realSubmit = onSubmit
         self.killRing = []
+        self.setInputHistory(History())
         super(LineInputWidget, self).__init__(maxWidth, self._onSubmit)
+
+
+    def setInputHistory(self, history):
+        """
+        Set the complete input history to the given history object.
+        """
+        self.inputHistory = history
+
+
+    def getInputHistory(self):
+        """
+        Retrieve a list of lines representing the current input history.
+        """
+        return self.inputHistory.allLines()
 
 
     def _onSubmit(self, line):
@@ -35,7 +57,10 @@ class LineInputWidget(TextInput):
         Clear the current buffer and call the submit handler specified when
         this widget was created.
         """
-        self.setText('')
+        if line:
+            self.inputHistory.addLine(line)
+            self.inputHistory.resetPosition()
+            self.setText('')
         self._realSubmit(line)
 
 
@@ -145,6 +170,34 @@ class LineInputWidget(TextInput):
             self.cursor -= len(previous)
             self.buffer = self.buffer[:self.cursor] + next + self.buffer[self.cursor + len(previous):]
             self.cursor += len(next)
+
+
+    def func_CTRL_p(self):
+        """
+        Handle C-p to swap the current input buffer with the previous line from
+        input history.
+        """
+        if not self.inputHistory.afterLines:
+            # Going from normal editing to history traversal - save the edit
+            # buffer.
+            self.savedBuffer = self.buffer
+        previousLine = self.inputHistory.previousLine()
+        if previousLine:
+            self.buffer = previousLine
+
+
+    def func_CTRL_n(self):
+        """
+        Handle C-n to swap the current input buffer with the next line from
+        input history.
+        """
+        nextLine = self.inputHistory.nextLine()
+        if nextLine:
+            self.buffer = nextLine
+        else:
+            if self.savedBuffer is not None:
+                self.buffer = self.savedBuffer
+                self.savedBuffer = None
 
 
     def keystrokeReceived(self, keyID, modifier):
