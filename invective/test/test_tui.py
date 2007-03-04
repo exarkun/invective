@@ -1,4 +1,3 @@
-
 """
 Tests for the top-level TUI code.
 """
@@ -81,17 +80,6 @@ class UserInterfaceTests(TestCase):
         self.failIfIn(privateModes.CURSOR_MODE, self.terminal.privateModes)
 
 
-    def test_serverConnectionEstablished(self):
-        """
-        Verify that when a new connection to a server is established, this is
-        reported in the output area.
-        """
-        ircTransport = StringIO()
-        ircProtocol = IRCClient(self.protocol)
-        ircProtocol.makeConnection(ircTransport)
-        self.protocol.makeConnection(self.terminal)
-        self.protocol._cbNewServerConnection(ircProtocol, 'irc.example.org', 'testuser')
-
 
 class InputParsingTests(TestCase):
     """
@@ -139,51 +127,110 @@ class InputParsingTests(TestCase):
         This is poorly factored.  IRC testing should be done elsewhere.
         Connection setup testing should be done elsewhere.
         """
-        self.protocol.cmd_SERVER('/server irc.example.org testuser')
-        self.assertEqual(len(self.tcpConnections), 1)
-        self.assertEqual(self.tcpConnections[0][:2], ('irc.example.org', 6667))
-        factory = self.tcpConnections[0][2]
-        protocol = factory.buildProtocol(('irc.example.org', 6667))
-        transport = StringIO()
-        protocol.makeConnection(transport)
-        self.assertEqual(transport.getvalue(), '')
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # See #2504 in Twisted tracker
+        from twisted.words.im import ircsupport
+        orig = ircsupport.reactor
+        ircsupport.reactor = self
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        try:
+            self.protocol.cmd_SERVER('/server irc.example.org testuser')
+            self.assertEqual(len(self.tcpConnections), 1)
+            self.assertEqual(self.tcpConnections[0][:2], ('irc.example.org', 6667))
+            factory = self.tcpConnections[0][2]
+            protocol = factory.buildProtocol(('irc.example.org', 6667))
+            transport = StringIO()
+            protocol.makeConnection(transport)
 
-        while self.clock.calls:
-            self.clock.advance(1)
+            while self.clock.calls:
+                self.clock.advance(1)
 
-        self.assertEqual(
-            transport.getvalue(),
-            'NICK testuser\r\n'
-            'USER testuser foo bar :None\r\n')
+            self.assertEqual(
+                transport.getvalue(),
+                'NICK testuser\r\n'
+                'USER testuser foo bar :Twisted-IM user\r\n')
 
-        output = str(self.terminal).splitlines()
-        input = output.pop()
-        status = output.pop()
-        report = output.pop()
-        for L in output:
-            self.assertEqual(L, ' ' * 80)
-        message = '== Connection to irc.example.org established.'
-        self.assertEqual(report, message + ' ' * (80 - len(message)))
+            output = str(self.terminal).splitlines()
+            input = output.pop()
+            status = output.pop()
+            report = output.pop()
+            for L in output:
+                self.assertEqual(L, ' ' * 80)
+            message = '== Connection to irc.example.org established.'
+            self.assertEqual(report, message + ' ' * (80 - len(message)))
+        finally:
+            ircsupport.reactor = orig
 
 
     def test_serverCommandFailedConnection(self):
         """
         Like L{test_serverCommand} but for a connection which fails.
         """
-        self.protocol.cmd_SERVER('/server irc.example.org testuser')
-        self.assertEqual(len(self.tcpConnections), 1)
-        self.assertEqual(self.tcpConnections[0][:2], ('irc.example.org', 6667))
-        factory = self.tcpConnections[0][2]
-        factory.clientConnectionFailed(None, TimeoutError("mock"))
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # See #2504 in Twisted tracker
+        from twisted.words.im import ircsupport
+        orig = ircsupport.reactor
+        ircsupport.reactor = self
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        try:
+            self.protocol.cmd_SERVER('/server irc.example.org testuser')
+            self.assertEqual(len(self.tcpConnections), 1)
+            self.assertEqual(self.tcpConnections[0][:2], ('irc.example.org', 6667))
+            factory = self.tcpConnections[0][2]
+            factory.clientConnectionFailed(None, TimeoutError("mock"))
 
-        while self.clock.calls:
-            self.clock.advance(1)
+            while self.clock.calls:
+                self.clock.advance(1)
 
-        output = str(self.terminal).splitlines()
-        input = output.pop()
-        status = output.pop()
-        report = output.pop()
-        for L in output:
-            self.assertEqual(L, ' ' * 80)
-        message = '== irc.example.org failed: User timeout caused connection failure: mock.'
-        self.assertEqual(report, message + ' ' * (80 - len(message)))
+            output = str(self.terminal).splitlines()
+            input = output.pop()
+            status = output.pop()
+            report = output.pop()
+            for L in output:
+                self.assertEqual(L, ' ' * 80)
+            message = '== irc.example.org failed: User timeout caused connection failure: mock.'
+            self.assertEqual(report, message + ' ' * (80 - len(message)))
+        finally:
+            ircsupport.reactor = orig

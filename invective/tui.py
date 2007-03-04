@@ -10,14 +10,14 @@ from tty import TIOCGWINSZ
 from struct import unpack
 
 from twisted.internet import reactor
-from twisted.internet.protocol import ClientCreator
+
+from twisted.words.im.ircsupport import IRCAccount
 
 from twisted.conch.insults.insults import TerminalProtocol, privateModes
 from twisted.conch.insults.window import TopWindow, VBox
 
 from invective.widgets import LineInputWidget, StatusWidget, OutputWidget
-from invective.irc import IRCClient
-
+from invective.chat import InvectiveChatUI
 
 # XXX TODO - Use Glade
 def createChatRootWidget(reactor, width, height, painter, statusModel, controller):
@@ -40,10 +40,23 @@ class UserInterface(TerminalProtocol):
     width = 80
     height = 24
 
-    channel = None
-    proto = None
+    group = None
+    client = None
 
     reactor = reactor
+
+    def connectionMade(self):
+        super(UserInterface, self).connectionMade()
+        self.terminal.eraseDisplay()
+        self.terminal.resetPrivateModes([privateModes.CURSOR_MODE])
+        self.rootWidget = createChatRootWidget(
+            self.reactor,
+            self.width - 2, self.height,
+            self._painter, self, self.parseInputLine)
+
+        # XXX rootWidget obviously needs a richer interface
+        self.ui = InvectiveChatUI(self.rootWidget.children[0].children[0])
+
 
     def _painter(self):
         self.rootWidget.draw(self.width, self.height, self.terminal)
@@ -57,45 +70,46 @@ class UserInterface(TerminalProtocol):
         return self.rootWidget.children[0].children[0].addMessage(msg)
 
 
-    def newServerConnection(self, kind, host):
-        protocol = IRCClient(self)
-        return ClientCreator(self.reactor, lambda: protocol).connectTCP(host, 6667)
+    def newServerConnection(self, host, username):
+        account = IRCAccount(
+            "IRC",
+            True,
+            username,
+            "",
+            host,
+            6667,
+            "")
+        def cbLogOn(client):
+            self.client = client
+            self.addOutputMessage("== Connection to %s established." % (host,))
+        def ebLogOn(err):
+            self.addOutputMessage("== %s failed: %s" % (host, err.getErrorMessage()))
+        account.logOn(self.ui).addCallbacks(cbLogOn, ebLogOn)
 
 
     def cmd_JOIN(self, line):
-        if self.proto is None:
+        if self.client is None:
             self.addOutputMessage('== no server')
         else:
-            channel = line.split()[1]
-            self.proto.join(channel)
-            self.channel = channel
+            channel = line.split()[1][1:]
+            self.client.joinGroup(channel)
+            self.group = self.client.getGroupConversation(channel)
             self.statusChanged()
 
 
     def cmd_PART(self, line):
-        if self.proto is None:
+        if self.client is None:
             self.addOutputMessage('== no server')
         else:
-            channel = line.split()[1]
-            self.proto.part(channel)
-            self.channel = None
+            channel = line.split()[1][1:]
+            self.client.leaveGroup(channel)
+            self.group = None
             self.statusChanged()
 
 
     def cmd_QUIT(self, line):
         self.terminal.setPrivateModes([privateModes.CURSOR_MODE])
         self.terminal.loseConnection()
-
-
-    def _cbNewServerConnection(self, proto, host, nickname):
-        self.addOutputMessage('== Connection to %s established.' % (host,))
-        proto.register(nickname)
-        self.proto = proto
-        self.nickname = nickname
-
-
-    def _ebNewServerConnection(self, err, host):
-        self.addOutputMessage('== %s failed: %s' % (host, err.getErrorMessage()))
 
 
     def cmd_SERVER(self, line):
@@ -105,16 +119,11 @@ class UserInterface(TerminalProtocol):
         @type line: C{str}
         @param line: A string of the form '/server <server hostname> <username>'.
         """
-        if self.proto is not None:
+        if self.client is not None:
             self.addOutputMessage('== already connected')
         else:
             hostname, username = line.split()[1:]
-            d = self.newServerConnection('irc', hostname)
-            d.addCallbacks(
-                self._cbNewServerConnection,
-                self._ebNewServerConnection,
-                callbackArgs=(hostname, username),
-                errbackArgs=(hostname,))
+            self.newServerConnection(hostname, username)
 
 
     def parseInputLine(self, line):
@@ -125,21 +134,11 @@ class UserInterface(TerminalProtocol):
             else:
                 self.addOutputMessage('== no such command')
         else:
-            if self.channel is None:
+            if self.group is None:
                 self.addOutputMessage('== no channel')
             else:
-                self.proto.msg(self.channel, line)
-                self.messageReceived(self.nickname, self.channel, line)
-
-
-    def connectionMade(self):
-        super(UserInterface, self).connectionMade()
-        self.terminal.eraseDisplay()
-        self.terminal.resetPrivateModes([privateModes.CURSOR_MODE])
-        self.rootWidget = createChatRootWidget(
-            self.reactor,
-            self.width - 2, self.height,
-            self._painter, self, self.parseInputLine)
+                self.group.sendText(line)
+                self.group.showGroupMessage(self.group.group.account.username, line, {})
 
 
     def keystrokeReceived(self, keyID, modifier):
@@ -154,7 +153,9 @@ class UserInterface(TerminalProtocol):
 
     # IStatusModel
     def focusedChannel(self):
-        return self.channel
+        if self.group is not None:
+            return self.group.group.name
+        return None
 
 
     # IChatObserver
