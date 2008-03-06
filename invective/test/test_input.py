@@ -100,6 +100,7 @@ class InputTests(TestCase):
         self.widget.buffer = s
         self.widget.cursor = n
         self.widget.keystrokeReceived(ServerProtocol.DELETE, None)
+        self.failUnless(self.painted)
         self.assertEqual(self.widget.buffer, s[:n] + s[n + 1:])
         self.assertEqual(self.widget.cursor, n)
 
@@ -109,6 +110,7 @@ class InputTests(TestCase):
         Test that a delete keystroke when the buffer is empty does nothing.
         """
         self.widget.keystrokeReceived(ServerProtocol.DELETE, None)
+        self.failIf(self.painted)
         self.assertEqual(self.widget.buffer, '')
         self.assertEqual(self.widget.cursor, 0)
 

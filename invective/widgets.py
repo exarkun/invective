@@ -200,6 +200,13 @@ class LineInputWidget(TextInput):
                 self.savedBuffer = None
 
 
+    def func_DELETE(self, modifier):
+        """
+        Handle delete to remove the character beneath the cursor.
+        """
+        self.buffer = self.buffer[:self.cursor] + self.buffer[self.cursor + 1:]
+
+
     def keystrokeReceived(self, keyID, modifier):
         """
         Override the inherited behavior to track whether either the cursor
