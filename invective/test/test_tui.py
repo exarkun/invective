@@ -13,7 +13,6 @@ from twisted.conch.insults.insults import privateModes
 
 from invective.widgets import LineInputWidget, StatusWidget, OutputWidget
 from invective.tui import createChatRootWidget, UserInterface
-from invective.irc import IRCClient
 
 
 class WidgetLayoutTests(TestCase):
