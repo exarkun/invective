@@ -41,4 +41,7 @@ contributing
 Feel free to contribute features and bug fixes.  Please file an issue on github
 describing the feature you're adding or bug you're fixing (preferably before you
 do the work, so there's time to discuss whether it makes sense or how to
-approach it), then send a pull request when you're ready.
+approach it), then send a pull request referencing that issue when you're ready.
+
+Please don't submit pull requests that include untested or undocumented changes!
+(And I promise that soon I'll add more documentation for what's here already)
