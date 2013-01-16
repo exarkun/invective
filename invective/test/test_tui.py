@@ -2,8 +2,7 @@
 Tests for the top-level TUI code.
 """
 
-from StringIO import StringIO
-
+from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 from twisted.internet.error import TimeoutError
 from twisted.internet.task import Clock
@@ -135,14 +134,14 @@ class InputParsingTests(TestCase):
         self.assertEqual(self.tcpConnections[0][:2], ('irc.example.org', 6667))
         factory = self.tcpConnections[0][2]
         protocol = factory.buildProtocol(('irc.example.org', 6667))
-        transport = StringIO()
+        transport = StringTransport()
         protocol.makeConnection(transport)
 
         while self.clock.calls:
             self.clock.advance(1)
 
         self.assertEqual(
-            transport.getvalue(),
+            transport.value(),
             'NICK testuser\r\n'
             'USER testuser foo bar :Twisted-IM user\r\n')
 
