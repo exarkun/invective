@@ -35,6 +35,9 @@ trial:
 
     $ trial invective
 
+invective uses travis-ci for continuous integration.  For current and recent
+build results, see https://travis-ci.org/exarkun/invective
+
 contributing
 ============
 
