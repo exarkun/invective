@@ -75,7 +75,7 @@ class UserInterface(TerminalProtocol):
             "IRC",
             True,
             username,
-            "",
+            None,
             host,
             6667,
             "")
