@@ -1,4 +1,5 @@
 #!/usr/bin/python
 
+from sys import argv
 from invective.scripts.invect import main
-main()
+main(argv[1:])
